@@ -1,0 +1,1 @@
+Slick sample mixed sql and non-sql logic 
