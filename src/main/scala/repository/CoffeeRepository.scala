@@ -2,16 +2,14 @@ package repository
 
 import model.{Coffee, Supplier}
 import slick.dbio.{DBIOAction, Effect, NoStream}
+import scala.language.higherKinds
 
+trait CoffeeRepository[F[_]] {
 
-trait CoffeeRepository {
+  def findSupplier(id:Int):F[Option[Supplier]]
 
-  type Action[R] = DBIOAction[R, NoStream, Effect.All]
+  def saveCoffee(coffee:Coffee):F[Int]
 
-  def findSupplier(id:Int):Action[Option[Supplier]]
-
-  def saveCoffee(coffee:Coffee):Action[Int]
-
-  def findCoffee(name:String):Action[Option[Coffee]]
+  def findCoffee(name:String):F[Option[Coffee]]
 
 }

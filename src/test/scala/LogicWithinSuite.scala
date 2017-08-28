@@ -2,17 +2,21 @@ import model.{Coffee, Coffees, Supplier, Suppliers}
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}
-import repository.CoffeeRepositoryImpl
+import repository.{CoffeeRepository, CoffeeRepositoryImpl, RepositoryContext, SlickContext}
 import slick.jdbc.H2Profile.api._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import slick.jdbc.meta._
 
 class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
   implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 
   val suppliers = TableQuery[Suppliers]
   val coffees = TableQuery[Coffees]
+
+  // fixed Implementation to Slick
+  val ctx = SlickContext
+  val repo:CoffeeRepository[ctx.Action] = new CoffeeRepositoryImpl()
 
   var db: Database = _
 
@@ -28,13 +32,7 @@ class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
     createSchema()
     insertSupplier()
 
-    val repo = new CoffeeRepositoryImpl()
     val coffee = Coffee("cof", 101, 2.0, 1, 2)
-
-    def existsSupplier(sup:Option[Supplier]) = DBIO.seq(sup match{
-      case Some(s) => DBIO.successful(true)
-      case _ => DBIO.failed(new RuntimeException("not exists"))
-    })
 
     def existsSupplier2(sup:Option[Supplier]) = sup match{
       case Some(s) => true
@@ -43,12 +41,14 @@ class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
 
     val action = for(
       supplier <- repo.findSupplier(coffee.supID);
-      _ <- DBIO.seq(if(existsSupplier2(supplier)) DBIO.successful("3") else DBIO.failed(new RuntimeException("not exists")));
-      //_ <- existsSupplier(supplier);
+      _ <- if(existsSupplier2(supplier)) ctx.success("3") else ctx.fail(new RuntimeException("not exists"));
       _ <- repo.saveCoffee(coffee)
     )yield {coffee}
     //execute logic
-    db.run(action.transactionally).futureValue
+
+    val res = ctx.withTransaction(db)(action)
+
+    res.futureValue
 
     val results = db.run(coffees.result).futureValue
     assert(results.size == 1)
@@ -60,15 +60,13 @@ class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
     createSchema()
     insertSupplier()
 
-    val repo = new CoffeeRepositoryImpl()
     val coffee = Coffee("cof", 101, 2.0, 1, 2)
     val coffee2 = Coffee("cof2", 102, 2.0, 1, 2)
 
-    def existsSupplier(sup:Option[Supplier]) = DBIO.seq(sup match{
-      case Some(s) => DBIO.successful(true)
-      case _ => DBIO.failed(new RuntimeException("not exists"))
-    })
-
+    def existsSupplier(sup:Option[Supplier]) = sup match{
+      case Some(s) => ctx.success(true)
+      case _ => ctx.fail(new RuntimeException("not exists"))
+    }
 
     val action = for(
       supplier <- repo.findSupplier(coffee.supID);
@@ -80,7 +78,8 @@ class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
     )yield{(coffee, coffee2)}
     //execute logic
     try {
-      db.run(action).futureValue
+
+      ctx.withTransaction(db)(action).futureValue
     } catch {
       case e:RuntimeException => {e.printStackTrace();assert(e.getMessage contains "not exists")}
     }
