@@ -1,1 +1,1 @@
-Slick sample mixed sql and non-sql logic 
+Slick sample mixed sql and non-sql logic with same transaction.
