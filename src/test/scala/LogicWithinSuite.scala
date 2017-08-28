@@ -1,4 +1,4 @@
-import model.{Coffees, Suppliers}
+import model.{Coffee, Coffees, Supplier, Suppliers}
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}
@@ -17,19 +17,12 @@ class TablesSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
     db.run((suppliers.schema ++ coffees.schema).create).futureValue
 
   def insertSupplier(): Int =
-    db.run(suppliers += (101, "Acme, Inc.")).futureValue
+    db.run(suppliers += Supplier(101, "Acme, Inc.")).futureValue
+
+  def insertCoffee(supId:Int): Int =
+    db.run(coffees += Coffee("cof", supId, 1.0, 4, 4)).futureValue
 
   before { db = Database.forConfig("test") }
-
-  test("Creating the Schema works") {
-    createSchema()
-
-    val tables = db.run(MTable.getTables).futureValue
-
-    assert(tables.size == 2)
-    assert(tables.count(_.name.name.equalsIgnoreCase("suppliers")) == 1)
-    assert(tables.count(_.name.name.equalsIgnoreCase("coffees")) == 1)
-  }
 
   test("Inserting a Supplier works") {
     createSchema()
@@ -43,8 +36,18 @@ class TablesSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
     insertSupplier()
     val results = db.run(suppliers.result).futureValue
     assert(results.size == 1)
-    assert(results.head._1 == 101)
+    assert(results.head.id == 101)
+
   }
 
+  test("Query Coffee works") {
+    createSchema()
+    insertSupplier()
+    insertCoffee(101)
+    val results = db.run(coffees.result).futureValue
+    assert(results.size == 1)
+    assert(results.head.name == "cof")
+
+  }
   after { db.close }
 }
