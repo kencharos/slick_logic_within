@@ -5,9 +5,8 @@ import slick.dbio.{DBIOAction, NoStream}
 import slick.lifted.TableQuery
 import slick.jdbc.H2Profile.api._
 
-
-class CoffeeRepositoryImpl[R] extends CoffeeRepository[SlickContext.Action]{
-
+/** Repository Implementation by Slick */
+class CoffeeRepositoryImpl[R](implicit m:Monad[SlickContext.Action]) extends CoffeeRepository[SlickContext.Action]{
 
   val suppliers = TableQuery[Suppliers]
   val coffees = TableQuery[Coffees]

@@ -15,8 +15,9 @@ class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
   val coffees = TableQuery[Coffees]
 
   // fixed Implementation to Slick
+  import SlickContext._ // import implicit monad instance
   val ctx = SlickContext
-  val repo:CoffeeRepository[ctx.Action] = new CoffeeRepositoryImpl()
+  val repo:CoffeeRepository[ctx.Action] = new CoffeeRepositoryImpl
 
   var db: Database = _
 

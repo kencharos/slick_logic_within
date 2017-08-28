@@ -4,7 +4,9 @@ import model.{Coffee, Supplier}
 import slick.dbio.{DBIOAction, Effect, NoStream}
 import scala.language.higherKinds
 
-trait CoffeeRepository[F[_]] {
+
+
+abstract class CoffeeRepository[F[_]:Monad] {
 
   def findSupplier(id:Int):F[Option[Supplier]]
 
