@@ -1,9 +1,9 @@
-import model.{Coffee, Coffees, Supplier, Suppliers}
+import model._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}
-import repository.{CoffeeRepository, CoffeeRepositoryImpl, RepositoryContext, SlickContext}
-import slick.jdbc.H2Profile.api._
+import repository._
+import slick.jdbc.H2Profile
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -11,13 +11,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class LogicWithinSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
   implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 
-  val suppliers = TableQuery[Suppliers]
-  val coffees = TableQuery[Coffees]
+  // set concrete profile
+  val ctx = new DatasourceLayer(H2Profile)
 
-  // fixed Implementation to Slick
-  import SlickContext._ // import implicit monad instance
-  val ctx = SlickContext
-  val repo:CoffeeRepository[ctx.Action] = new CoffeeRepositoryImpl
+  val suppliers = ctx.suppliers
+  val coffees = ctx.coffees
+
+  import ctx.profile.api._
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import ctx._ // import implicit monad instance
+  val repo:CoffeeRepository[ctx.Action] = new ctx.CoffeeRepositoryImpl(ctx)
 
   var db: Database = _
 

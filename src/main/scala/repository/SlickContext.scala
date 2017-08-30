@@ -1,12 +1,16 @@
 package repository
 
-import slick.dbio.{DBIOAction, Effect, NoStream}
-import slick.jdbc.JdbcBackend.DatabaseDef
-import slick.jdbc.H2Profile.api._
+import model.{Tables}
+import slick.jdbc.JdbcProfile
 
-import scala.concurrent.{ExecutionContext, Future} //TODO DB実装で切り替わる手段は無い?。せめて一箇所にだけ定義できないか?
+import scala.concurrent.{ExecutionContext, Future}
 
-object SlickContext extends RepositoryContext{
+trait SlickContext extends RepositoryContext with Tables{
+
+  val profile:JdbcProfile
+
+  import profile.api._
+
   type Action[R] = DBIOAction[R, NoStream, Effect.All]
   type Storage = Database
   def success[R](r:R):Action[R] = DBIO.successful(r)

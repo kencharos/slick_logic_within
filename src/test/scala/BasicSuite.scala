@@ -1,16 +1,27 @@
-import model.{Coffee, Coffees, Supplier, Suppliers}
+import model._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}
+import repository.{CoffeeRepository, DatasourceLayer, SlickContext}
+import slick.jdbc.H2Profile
 import slick.jdbc.H2Profile.api._
 import slick.jdbc.meta._
 
 class TablesSuite extends FunSuite with BeforeAndAfter with ScalaFutures {
   implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 
-  val suppliers = TableQuery[Suppliers]
-  val coffees = TableQuery[Coffees]
+  val ctx = new DatasourceLayer(H2Profile)
 
+  val suppliers = ctx.suppliers
+  val coffees = ctx.coffees
+
+  import ctx.profile.api._
+
+  // fixed Implementation to Slick
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import ctx._
+
+  val repo:CoffeeRepository[ctx.Action] = new ctx.CoffeeRepositoryImpl(ctx)
   var db: Database = _
 
   def createSchema() =
