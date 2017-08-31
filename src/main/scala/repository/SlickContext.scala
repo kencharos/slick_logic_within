@@ -5,7 +5,7 @@ import slick.jdbc.JdbcProfile
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait SlickContext extends RepositoryContext with Tables{
+trait SlickContext{
 
   val profile:JdbcProfile
 
