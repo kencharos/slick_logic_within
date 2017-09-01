@@ -1,6 +1,9 @@
+import cats.kernel.Monoid
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}
+
+import scala.collection.mutable
 
 
 class TestFoldMap extends FunSuite with BeforeAndAfter with ScalaFutures {
@@ -9,14 +12,15 @@ class TestFoldMap extends FunSuite with BeforeAndAfter with ScalaFutures {
   case class Child(id:Int, parentId:Int)
 
 
+
   import cats.instances.list._
   import cats.instances.tuple._
   import cats.instances.int._
   import cats.instances.map._
   import cats.syntax.foldable._
+  import cats.syntax.monoid._
 
   test("Grouping by FoldMap") {
-
 
     val t = List( (1,"A"), (1,"B"), (2,"C"),(3,"D"), (3,"E") )
     val t2 = t.foldMap{case (a,b) => Map(a -> List(b))}
@@ -31,9 +35,24 @@ class TestFoldMap extends FunSuite with BeforeAndAfter with ScalaFutures {
       (Parent(3, "P3"), Child(5,3))
     )
 
-    val grouped = target.foldMap{case (p,c) => Map(p -> List(c))}// group by same parent
+    // mutableMapに対する Monoidインスタンスは cats標準で無いので、作る。
+    implicit def mMapMonoidInstance[A,B:Monoid] = new Monoid[mutable.LinkedHashMap[A,B]] {
+      override def empty = mutable.LinkedHashMap()
+      override def combine(x: mutable.LinkedHashMap[A, B], y: mutable.LinkedHashMap[A, B]) = {
+        val monoid = Monoid[B]
+        val z = empty
+        z ++= x
+        z ++= y.map{
+          case (k, v) if x.contains(k) => k -> monoid.combine(x(k),v)
+          case (k,v) => k -> v
+        }
+        z
+      }
+    }
+
+    def toLM[A,B](a:A, b:B)= mutable.LinkedHashMap(a -> List(b))
+    val grouped = target.foldMap{case (p,c) => toLM(p,c)}// group by same parent
                     .toList.map{case (p, cs) => p.copy(children = cs)} // set parent's children
-                    .sortBy(_.id) // sort
     println(grouped)
     assert(grouped(0).children.size == 2)
     assert(grouped(1).children.size == 1)
